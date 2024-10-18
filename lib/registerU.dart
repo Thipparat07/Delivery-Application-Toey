@@ -1,6 +1,8 @@
 import 'dart:developer';
 import 'dart:io'; // For File usage
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/login.dart';
 import 'package:flutter_delivery_1/map_page.dart';
 import 'package:get/get.dart'; // Import Get
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -8,6 +10,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart'; // Import Geolocator
 import 'package:geocoding/geocoding.dart'; // Import Geocoding
 import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // For JSON access
+import 'package:http_parser/http_parser.dart'; // Import MediaType from http_parser
 
 class Registeru extends StatefulWidget {
   const Registeru({super.key});
@@ -24,6 +29,10 @@ class _RegisteruState extends State<Registeru> {
   String? _address; // Variable to store address
   bool _isLoading = false; // Variable for loading status
   String? _email; // Variable to store email
+  String? _name; // Variable to store name
+  String? _password; // Variable to store password
+  String? _phoneNumber; // Variable to store phone number
+  Uint8List? _imageBytes; // Variable to store the image bytes
 
   @override
   void initState() {
@@ -37,8 +46,11 @@ class _RegisteruState extends State<Registeru> {
         source: ImageSource.gallery); // Pick image from gallery
 
     if (pickedFile != null) {
+      final imageBytes =
+          await pickedFile.readAsBytes(); // Read the file as bytes
       setState(() {
-        _image = File(pickedFile.path); // Store path of the selected image
+        _image = File(pickedFile.path); // Store the file for display
+        _imageBytes = imageBytes; // Store the image bytes for sending to API
       });
     }
   }
@@ -106,6 +118,67 @@ class _RegisteruState extends State<Registeru> {
       print('Location permission granted');
     } else if (status.isDenied) {
       print('Location permission denied');
+    }
+  }
+
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true; // Show loading state
+      });
+
+      // Prepare the request
+      final uri = Uri.parse(
+          'https://api-delivery-application.vercel.app/register/users'); // Update to your API URL
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add text fields
+      request.fields['Name'] =
+          _name ?? ''; // Assuming you have a variable _name
+      request.fields['email'] = _email ?? ''; // Email
+      request.fields['address'] = _address ?? ''; // Address
+      request.fields['password'] = _password ?? ''; // Password
+      request.fields['phoneNumber'] = _phoneNumber ?? ''; // Phone Number
+
+      // Add image file if selected
+      if (_imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'profilePicture', // The key for the image file
+          _imageBytes!, // The image bytes
+          filename: _image!.path.split('/').last, // Original filename
+          contentType:
+              MediaType('image', 'jpeg'), // Set content type for the image
+        ));
+      }
+
+      try {
+        final response = await request.send(); // Send the request
+
+        // Handle the response
+        if (response.statusCode == 201) {
+          // Check if the registration was successful
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("ลงทะเบียนสำเร็จ")),
+          );
+          Get.to(() => Login());
+        } else {
+          final responseData =
+              await response.stream.bytesToString(); // Get response body
+          log(responseData);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("เกิดข้อผิดพลาด: $responseData")),
+          );
+        }
+      } catch (e) {
+        // Handle exceptions
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์")),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false; // Hide loading state
+        });
+      }
     }
   }
 
@@ -212,6 +285,9 @@ class _RegisteruState extends State<Registeru> {
                         }
                         return null;
                       },
+                      onChanged: (value) {
+                        _name = value; // Store name value
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -219,12 +295,13 @@ class _RegisteruState extends State<Registeru> {
                         labelText: 'Email', // Email field label
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: TextInputType.emailAddress, // Email keyboard type
+                      keyboardType:
+                          TextInputType.emailAddress, // Email keyboard type
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกอีเมล';
-                        } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                          return 'กรุณากรอกอีเมลที่ถูกต้อง'; // Email format validation
+                        if (value == null ||
+                            value.isEmpty ||
+                            !GetUtils.isEmail(value)) {
+                          return 'กรุณากรอกอีเมลที่ถูกต้อง';
                         }
                         return null;
                       },
@@ -234,24 +311,83 @@ class _RegisteruState extends State<Registeru> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Address',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        border: const OutlineInputBorder(),
                       ),
-                      maxLines: 2, // Allow multiple lines
-                      readOnly:
-                          true, // Make the field read-only, since the address is fetched automatically
-                      controller: TextEditingController(
-                          text:
-                              _address), // Use a TextEditingController to set the address dynamically
+                      keyboardType: TextInputType.phone, // Phone keyboard type
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกที่อยู่';
+                          return 'กรุณากรอกหมายเลขโทรศัพท์';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        _phoneNumber = value; // Store phone number
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible =
+                                  !_isPasswordVisible; // Toggle password visibility
+                            });
+                          },
+                        ),
+                      ),
+                      obscureText:
+                          !_isPasswordVisible, // Password visibility toggle
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'กรุณากรอกรหัสผ่าน';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        _password = value; // Store password
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordVisible =
+                                  !_isConfirmPasswordVisible; // Toggle confirm password visibility
+                            });
+                          },
+                        ),
+                      ),
+                      obscureText:
+                          !_isConfirmPasswordVisible, // Confirm password visibility toggle
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'กรุณากรอกรหัสผ่านอีกครั้ง';
+                        } else if (value != _password) {
+                          return 'รหัสผ่านไม่ตรงกัน';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                                        const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -323,99 +459,33 @@ class _RegisteruState extends State<Registeru> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                                        const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
-                        labelText: 'Phone',
+                        labelText: 'Address',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: TextInputType.phone, // Phone keyboard type
+                      maxLines: 2, // Allow multiple lines
+                      readOnly:
+                          true, // Make the field read-only, since the address is fetched automatically
+                      controller: TextEditingController(
+                          text:
+                              _address), // Use a TextEditingController to set the address dynamically
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกหมายเลขโทรศัพท์';
+                          return 'กรุณากรอกที่อยู่';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      obscureText:
-                          !_isPasswordVisible, // Toggle password visibility
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordVisible =
-                                  !_isPasswordVisible; // Toggle password visibility
-                            });
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกรหัสผ่าน';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      obscureText:
-                          !_isConfirmPasswordVisible, // Toggle confirm password visibility
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isConfirmPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isConfirmPasswordVisible =
-                                  !_isConfirmPasswordVisible; // Toggle confirm password visibility
-                            });
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกยืนยันรหัสผ่าน';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          // Form validation successful
-                          // Proceed with registration logic
-                          log('Registration successful');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C1C8D),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'Register',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _register, // Handle registration
+                        child: _isLoading
+                            ? const CircularProgressIndicator() // Show loading indicator while loading
+                            : const Text('Register'), // Register button
                       ),
                     ),
                   ],
