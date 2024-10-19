@@ -1,8 +1,13 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_delivery_1/login.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // For JSON access
+import 'package:http_parser/http_parser.dart'; // Import MediaType from http_parser
 
 class Registerr extends StatefulWidget {
   const Registerr({super.key});
@@ -12,18 +17,98 @@ class Registerr extends StatefulWidget {
 }
 
 class _RegisterrState extends State<Registerr> {
-  File? _image; // ตัวแปรเก็บรูปภาพที่เลือก
-  final _formKey = GlobalKey<FormState>(); // กุญแจสำหรับฟอร์ม
-  bool _isPasswordVisible = false; // สถานะของการแสดงรหัสผ่าน
-  bool _isConfirmPasswordVisible = false; // สถานะของการแสดงยืนยันรหัสผ่าน
+  File? _image; // Variable to hold the selected image
+  final _formKey = GlobalKey<FormState>(); // Form key
+  bool _isPasswordVisible = false; // Password visibility status
+  bool _isConfirmPasswordVisible = false; // Confirm password visibility status
+  bool _isLoading = false; // Loading status for the button
+  
+  // TextEditingController to capture form inputs
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _vehicleRegistrationController = TextEditingController();
+
+  Uint8List? _imageBytes; // Variable to store the image bytes
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery); // Pick image from gallery
 
     if (pickedFile != null) {
+      final imageBytes = await pickedFile.readAsBytes(); // Read the file as bytes
       setState(() {
-        _image = File(pickedFile.path);
+        _image = File(pickedFile.path); // Store the file for display
+        _imageBytes = imageBytes; // Store the image bytes for sending to API
+      });
+    }
+  }
+
+  Future<void> _register() async {
+    log('Register function called');
+
+    // Log input values
+    log('Name: ${_nameController.text}');
+    log('Email: ${_emailController.text}');
+    log('Phone: ${_phoneNumberController.text}');
+    log('Password: ${_passwordController.text}');
+    log('Vehicle Registration: ${_vehicleRegistrationController.text}');
+
+    // Prepare the request
+    final uri = Uri.parse('https://api-delivery-application.vercel.app/register/riders');
+    final request = http.MultipartRequest('POST', uri);
+
+    // Add form data
+    request.fields['Name'] = _nameController.text;
+    request.fields['email'] = _emailController.text;
+    request.fields['password'] = _passwordController.text;
+    request.fields['phoneNumber'] = _phoneNumberController.text;
+    request.fields['vehicleRegistration'] = _vehicleRegistrationController.text;
+
+    // Add image file if selected
+    if (_imageBytes != null) {
+      log('Image selected, adding to request');
+      request.files.add(http.MultipartFile.fromBytes(
+        'profilePicture',
+        _imageBytes!,
+        filename: _image!.path.split('/').last,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    } else {
+      log('No image selected');
+    }
+
+    setState(() {
+      _isLoading = true; // Set loading state to true
+    });
+
+    try {
+      final response = await request.send(); // Send request
+
+      if (response.statusCode == 201) {
+        log('Registration successful');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("ลงทะเบียนสำเร็จ")),
+        );
+        Get.to(() => const Login()); // Navigate to login page
+      } else {
+        log('Registration failed with status code: ${response.statusCode}');
+        final responseData = await response.stream.bytesToString();
+        log('Error: $responseData');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("เกิดข้อผิดพลาด: $responseData")),
+        );
+      }
+    } catch (e) {
+      log('Error occurred: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์")),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false; // Set loading state to false after request completes
       });
     }
   }
@@ -33,13 +118,9 @@ class _RegisterrState extends State<Registerr> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Image.asset(
-            'asset/images/icon_back.png',
-            width: 25,
-            height: 29.32,
-          ),
+          icon: Image.asset('asset/images/icon_back.png', width: 25, height: 29.32),
           onPressed: () {
-            Get.off(() => const Login()); // ใช้ Get.off() เพื่อนำทางไปยังหน้า Login
+            Get.off(() => const Login());
           },
         ),
         actions: <Widget>[
@@ -48,11 +129,7 @@ class _RegisterrState extends State<Registerr> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Image.asset(
-                  'asset/images/logo.png',
-                  width: 81,
-                  height: 71,
-                ),
+                Image.asset('asset/images/logo.png', width: 81, height: 71),
                 Transform.translate(
                   offset: const Offset(0, -15),
                   child: const Text(
@@ -122,6 +199,7 @@ class _RegisterrState extends State<Registerr> {
                 child: ListView(
                   children: [
                     TextFormField(
+                      controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: 'Name',
                         border: OutlineInputBorder(),
@@ -135,6 +213,7 @@ class _RegisterrState extends State<Registerr> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _phoneNumberController,
                       decoration: const InputDecoration(
                         labelText: 'Phone',
                         border: OutlineInputBorder(),
@@ -149,6 +228,7 @@ class _RegisterrState extends State<Registerr> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         border: OutlineInputBorder(),
@@ -167,6 +247,7 @@ class _RegisterrState extends State<Registerr> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _passwordController,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         border: const OutlineInputBorder(),
@@ -193,6 +274,7 @@ class _RegisterrState extends State<Registerr> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _confirmPasswordController,
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
                         border: const OutlineInputBorder(),
@@ -213,44 +295,42 @@ class _RegisterrState extends State<Registerr> {
                       obscureText: !_isConfirmPasswordVisible,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกยืนยันรหัสผ่าน';
+                          return 'กรุณายืนยันรหัสผ่าน';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'รหัสผ่านไม่ตรงกัน';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _vehicleRegistrationController,
                       decoration: const InputDecoration(
                         labelText: 'Vehicle Registration',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกหมายเลขทะเบียนรถ';
+                          return 'กรุณากรอกเลขทะเบียนรถ';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState?.validate() ?? false) {
-                          // ทำสิ่งที่ต้องการเมื่อฟอร์มถูกต้อง
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0A2A5A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        foregroundColor: Colors.white, // เพิ่มสีตัวอักษร
-                      ),
-                      child: const Text('Sign up'),
+                      onPressed: _isLoading
+                          ? null // Disable button if loading
+                          : () {
+                              if (_formKey.currentState!.validate()) {
+                                _register();
+                              }
+                            },
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text('Sign up'),
                     ),
                   ],
                 ),
@@ -262,3 +342,4 @@ class _RegisterrState extends State<Registerr> {
     );
   }
 }
+

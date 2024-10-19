@@ -1,7 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/home_page.dart';
 import 'package:flutter_delivery_1/registerR.dart';
 import 'package:flutter_delivery_1/registerU.dart';
 import 'package:get/get.dart'; // นำเข้า Get
+import 'package:http/http.dart' as http; // นำเข้า HTTP
+import 'dart:convert'; // สำหรับ jsonEncode
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -12,6 +17,60 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   bool _isPasswordVisible = false;
+  bool _isLoading = false; // ตัวแปรสำหรับจัดการสถานะการโหลด
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true; // เปลี่ยนสถานะการโหลดเมื่อเริ่มทำงาน
+    });
+
+    final response = await http.post(
+      Uri.parse(
+          'https://api-delivery-application.vercel.app/login'), // เปลี่ยน URL ให้ตรงกับ API ของคุณ
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': _emailController.text,
+        'password': _passwordController.text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      // เข้าสู่ระบบสำเร็จ
+      final data = jsonDecode(response.body);
+      String userType = data['userType']; // สมมติว่า API ส่งข้อมูล UserType
+      log('Login successful: ${data['message']}');
+
+      // นำทางตามประเภทผู้ใช้
+      if (userType == 'User') {
+        // นำทางไปยังหน้า User
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'])),
+        );
+        Get.to(HomePage()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
+      } else if (userType == 'Rider') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'])),
+        );
+        // นำทางไปยังหน้า Rider
+        Get.to(Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
+      }
+    } else {
+      // แสดงข้อผิดพลาด
+      final data = jsonDecode(response.body);
+      log('Login failed: ${data['message']}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['message'])),
+      );
+    }
+
+    setState(() {
+      _isLoading = false; // เปลี่ยนสถานะการโหลดเมื่อเสร็จสิ้น
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +103,7 @@ class _LoginState extends State<Login> {
 
             // ช่องกรอกอีเมล
             TextFormField(
+              controller: _emailController, // ใช้ Controller
               decoration: const InputDecoration(
                 labelText: 'Email',
                 border: OutlineInputBorder(),
@@ -54,6 +114,7 @@ class _LoginState extends State<Login> {
 
             // ช่องกรอกรหัสผ่าน
             TextFormField(
+              controller: _passwordController, // ใช้ Controller
               obscureText: !_isPasswordVisible,
               decoration: InputDecoration(
                 labelText: 'Password',
@@ -76,9 +137,9 @@ class _LoginState extends State<Login> {
 
             // ปุ่ม Sign In
             ElevatedButton(
-              onPressed: () {
-                // การทำงานเมื่อกดปุ่ม Sign In
-              },
+              onPressed: _isLoading
+                  ? null
+                  : _login, // ป้องกันไม่ให้กดปุ่มในขณะที่กำลังโหลด
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A2A5A),
                 foregroundColor: Colors.white,
@@ -88,7 +149,10 @@ class _LoginState extends State<Login> {
                   borderRadius: BorderRadius.circular(7),
                 ),
               ),
-              child: const Text('Sign In'),
+              child: _isLoading
+                  ? const CircularProgressIndicator(
+                      color: Colors.white) // แสดงตัวโหลดเมื่อกำลังทำงาน
+                  : const Text('Sign In'),
             ),
             const SizedBox(height: 40),
 
