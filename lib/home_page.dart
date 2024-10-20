@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/login.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart'; 
 class HomePage extends StatefulWidget {
@@ -15,6 +16,7 @@ class _HomePageState extends State<HomePage> {
   final box = GetStorage();
   int userId = GetStorage().read('userId');
   String Name = GetStorage().read('Name');
+  String userType = GetStorage().read('userType');
 
   void _onItemTapped(int index) {
     setState(() {
@@ -33,7 +35,11 @@ class _HomePageState extends State<HomePage> {
         Get.to(() => ()); // หน้าสถานะการจัดส่ง
         break;
       case 3:
-        Get.to(() => ()); // หน้าออกจากระบบ
+        final box = GetStorage();
+        box.remove('userId');  // ลบ userId
+        box.remove('Name');  // ลบ userId
+        box.remove('userType');  // ลบ userId
+        Get.to(() => const Login()); // หน้าสถานะการจัดส่ง
         break;
     }
   }
