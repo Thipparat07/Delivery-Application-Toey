@@ -5,6 +5,7 @@ import 'package:flutter_delivery_1/home_page.dart';
 import 'package:flutter_delivery_1/registerR.dart';
 import 'package:flutter_delivery_1/registerU.dart';
 import 'package:get/get.dart'; // นำเข้า Get
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http; // นำเข้า HTTP
 import 'dart:convert'; // สำหรับ jsonEncode
 
@@ -20,6 +21,30 @@ class _LoginState extends State<Login> {
   bool _isLoading = false; // ตัวแปรสำหรับจัดการสถานะการโหลด
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkUserLoggedIn();
+    });
+  }
+
+  void _checkUserLoggedIn() {
+    final box = GetStorage();
+    final String userType = box.read('userType'); // อ่านค่า userType
+
+    if (userType != '') {
+      // นำทางตามประเภทผู้ใช้
+      if (userType == 'User') {
+       // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
+        Get.to(const HomePage());
+      } else if (userType == 'Rider') {
+        // นำทางไปยังหน้า Rider
+        Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
+      }
+    }
+  }
 
   Future<void> _login() async {
     setState(() {
@@ -41,22 +66,35 @@ class _LoginState extends State<Login> {
     if (response.statusCode == 200) {
       // เข้าสู่ระบบสำเร็จ
       final data = jsonDecode(response.body);
-      String userType = data['userType']; // สมมติว่า API ส่งข้อมูล UserType
-      log('Login successful: ${data['message']}');
+      String userType = data['userType'];
+      int userId = data['userId'];
+      String Name = data['Name'];
+
+      // log('Login successful: ${data['message']}');
+      // log('userId: ${data['userId']}');
+      // log('Name: ${data['Name']}');
 
       // นำทางตามประเภทผู้ใช้
       if (userType == 'User') {
-        // นำทางไปยังหน้า User
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
         );
-        Get.to(HomePage()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
+        final box = GetStorage();
+        // เก็บข้อมูล
+        box.write('userType', userType);
+        box.write('userId', userId);
+        box.write('Name', Name);
+        Get.to(const HomePage()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
       } else if (userType == 'Rider') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
         );
-        // นำทางไปยังหน้า Rider
-        Get.to(Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
+        final box = GetStorage();
+        // เก็บข้อมูล
+        box.write('userType', userType);
+        box.write('userId', userId);
+        box.write('Name', Name);
+        Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
       }
     } else {
       // แสดงข้อผิดพลาด

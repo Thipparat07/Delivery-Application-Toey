@@ -1,5 +1,8 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; 
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart'; 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -9,6 +12,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0; // ใช้เพื่อเก็บค่าของเมนูที่เลือก
+  final box = GetStorage();
+  int userId = GetStorage().read('userId');
+  String Name = GetStorage().read('Name');
 
   void _onItemTapped(int index) {
     setState(() {
@@ -51,8 +57,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final String userName = 'Phuri Ngomsaraku';
-
+    log('userId :$userId');
+    log('Name :$Name');
     return Scaffold(
       body: Column(
         children: [
@@ -102,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     Text(
-                      userName, // แสดงชื่อผู้ใช้งาน
+                      Name, // แสดงชื่อผู้ใช้งาน
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.white,

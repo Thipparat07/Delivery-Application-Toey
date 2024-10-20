@@ -5,9 +5,12 @@ import 'package:flutter_delivery_1/registerR.dart';
 import 'package:flutter_delivery_1/registerU.dart';
 import 'package:get/get.dart';
 import 'package:flutter_delivery_1/home_page.dart';
+import 'package:get_storage/get_storage.dart';
 
 
-void main() {
+void main()async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await GetStorage.init();
   runApp(const MyApp());
 }
 
