@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_delivery_1/config/config.dart';
 import 'package:flutter_delivery_1/login.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,23 +23,39 @@ class _RegisterrState extends State<Registerr> {
   bool _isPasswordVisible = false; // Password visibility status
   bool _isConfirmPasswordVisible = false; // Confirm password visibility status
   bool _isLoading = false; // Loading status for the button
-  
+
   // TextEditingController to capture form inputs
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _vehicleRegistrationController = TextEditingController();
+  final TextEditingController _vehicleRegistrationController =
+      TextEditingController();
 
   Uint8List? _imageBytes; // Variable to store the image bytes
 
+  String url = '';
+
+  @override
+  void initState() {
+    super.initState();
+    Configuration.getConfig().then(
+      (config) {
+        url = config['apiEndpoint'];
+      },
+    );
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery); // Pick image from gallery
+    final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery); // Pick image from gallery
 
     if (pickedFile != null) {
-      final imageBytes = await pickedFile.readAsBytes(); // Read the file as bytes
+      final imageBytes =
+          await pickedFile.readAsBytes(); // Read the file as bytes
       setState(() {
         _image = File(pickedFile.path); // Store the file for display
         _imageBytes = imageBytes; // Store the image bytes for sending to API
@@ -57,7 +74,8 @@ class _RegisterrState extends State<Registerr> {
     log('Vehicle Registration: ${_vehicleRegistrationController.text}');
 
     // Prepare the request
-    final uri = Uri.parse('https://api-delivery-application.vercel.app/register/riders');
+    final uri = Uri.parse(
+        '$url/register/riders');
     final request = http.MultipartRequest('POST', uri);
 
     // Add form data
@@ -108,7 +126,8 @@ class _RegisterrState extends State<Registerr> {
       );
     } finally {
       setState(() {
-        _isLoading = false; // Set loading state to false after request completes
+        _isLoading =
+            false; // Set loading state to false after request completes
       });
     }
   }
@@ -118,7 +137,8 @@ class _RegisterrState extends State<Registerr> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Image.asset('asset/images/icon_back.png', width: 25, height: 29.32),
+          icon: Image.asset('asset/images/icon_back.png',
+              width: 25, height: 29.32),
           onPressed: () {
             Get.off(() => const Login());
           },
@@ -342,4 +362,3 @@ class _RegisterrState extends State<Registerr> {
     );
   }
 }
-

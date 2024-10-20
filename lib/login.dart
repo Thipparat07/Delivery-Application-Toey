@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/config/config.dart';
 import 'package:flutter_delivery_1/home_page.dart';
 import 'package:flutter_delivery_1/registerR.dart';
 import 'package:flutter_delivery_1/registerU.dart';
@@ -21,10 +22,16 @@ class _LoginState extends State<Login> {
   bool _isLoading = false; // ตัวแปรสำหรับจัดการสถานะการโหลด
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  String url = '';
 
   @override
   void initState() {
     super.initState();
+    Configuration.getConfig().then(
+      (config) {
+        url = config['apiEndpoint'];
+      },
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkUserLoggedIn();
     });
@@ -32,21 +39,17 @@ class _LoginState extends State<Login> {
 
   void _checkUserLoggedIn() {
     final box = GetStorage();
-    final String userType = box.read('userType')??'null'; // อ่านค่า userType
+    final String userType = box.read('userType') ?? 'null'; // อ่านค่า userType
 
     if (userType != '') {
       // นำทางตามประเภทผู้ใช้
       if (userType == 'User') {
-       // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
+        // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
         Get.to(const HomePage());
       } else if (userType == 'Rider') {
         // นำทางไปยังหน้า Rider
         Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
       }
-    }else{
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('hwllllllllllllll')),
-        );
     }
   }
 
@@ -57,7 +60,7 @@ class _LoginState extends State<Login> {
 
     final response = await http.post(
       Uri.parse(
-          'https://api-delivery-application.vercel.app/login'), // เปลี่ยน URL ให้ตรงกับ API ของคุณ
+          '$url/login'), // เปลี่ยน URL ให้ตรงกับ API ของคุณ
       headers: {
         'Content-Type': 'application/json',
       },
@@ -70,9 +73,9 @@ class _LoginState extends State<Login> {
     if (response.statusCode == 200) {
       // เข้าสู่ระบบสำเร็จ
       final data = jsonDecode(response.body);
-      String  userType = data['userType'];
-      int     userId = data['userId'];
-      String  Name = data['Name'];
+      String userType = data['userType'];
+      int userId = data['userId'];
+      String Name = data['Name'];
 
       // log('Login successful: ${data['message']}');
       // log('userId: ${data['userId']}');

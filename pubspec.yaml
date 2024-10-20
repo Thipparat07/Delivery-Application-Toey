@@ -92,6 +92,7 @@ flutter:
     - asset/images/Gps.png
     - asset/images/cover.jpg
     - asset/icon/app_icon.png
+    - asset/config/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

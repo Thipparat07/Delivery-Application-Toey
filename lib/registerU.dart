@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io'; // For File usage
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/config/config.dart';
 import 'package:flutter_delivery_1/login.dart';
 import 'package:flutter_delivery_1/map_page.dart';
 import 'package:get/get.dart'; // Import Get
@@ -33,10 +34,16 @@ class _RegisteruState extends State<Registeru> {
   String? _password; // Variable to store password
   String? _phoneNumber; // Variable to store phone number
   Uint8List? _imageBytes; // Variable to store the image bytes
+  String url = '';
 
   @override
   void initState() {
     super.initState();
+    Configuration.getConfig().then(
+      (config) {
+        url = config['apiEndpoint'];
+      },
+    );
     requestLocationPermission();
   }
 
@@ -129,7 +136,7 @@ class _RegisteruState extends State<Registeru> {
 
       // Prepare the request
       final uri = Uri.parse(
-          'https://api-delivery-application.vercel.app/register/users'); // Update to your API URL
+          '$url/register/users'); // Update to your API URL
       final request = http.MultipartRequest('POST', uri);
 
       // Add text fields
@@ -387,7 +394,7 @@ class _RegisteruState extends State<Registeru> {
                         return null;
                       },
                     ),
-                                        const SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -459,7 +466,7 @@ class _RegisteruState extends State<Registeru> {
                         ),
                       ),
                     ),
-                                        const SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Address',
