@@ -259,7 +259,6 @@ class _RegisterrState extends State<Registerr> {
                             RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
                       ],
                     ),
-                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
