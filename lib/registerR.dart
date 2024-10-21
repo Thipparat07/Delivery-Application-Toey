@@ -74,8 +74,7 @@ class _RegisterrState extends State<Registerr> {
     log('Vehicle Registration: ${_vehicleRegistrationController.text}');
 
     // Prepare the request
-    final uri = Uri.parse(
-        '$url/register/riders');
+    final uri = Uri.parse('$url/register/riders');
     final request = http.MultipartRequest('POST', uri);
 
     // Add form data
@@ -230,6 +229,10 @@ class _RegisterrState extends State<Registerr> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -239,12 +242,22 @@ class _RegisterrState extends State<Registerr> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
+                      maxLength: 10, // จำกัดจำนวนตัวอักษรให้มีได้แค่ 10 ตัว
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'กรุณากรอกเบอร์โทรศัพท์';
                         }
+                        if (value.length != 10) {
+                          return 'เบอร์โทรศัพท์ต้องมี 10 หลัก';
+                        }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter
+                            .digitsOnly, // จำกัดให้ใส่ได้แค่ตัวเลข
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -264,6 +277,10 @@ class _RegisterrState extends State<Registerr> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -291,6 +308,10 @@ class _RegisterrState extends State<Registerr> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -322,6 +343,10 @@ class _RegisterrState extends State<Registerr> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -336,6 +361,10 @@ class _RegisterrState extends State<Registerr> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(

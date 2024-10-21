@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io'; // For File usage
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_delivery_1/config/config.dart';
 import 'package:flutter_delivery_1/login.dart';
 import 'package:flutter_delivery_1/map_page.dart';
@@ -135,8 +136,7 @@ class _RegisteruState extends State<Registeru> {
       });
 
       // Prepare the request
-      final uri = Uri.parse(
-          '$url/register/users'); // Update to your API URL
+      final uri = Uri.parse('$url/register/users'); // Update to your API URL
       final request = http.MultipartRequest('POST', uri);
 
       // Add text fields
@@ -295,15 +295,20 @@ class _RegisteruState extends State<Registeru> {
                       onChanged: (value) {
                         _name = value; // Store name value
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
+
+                    // สำหรับฟิลด์ Email
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
-                        labelText: 'Email', // Email field label
+                        labelText: 'Email',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType:
-                          TextInputType.emailAddress, // Email keyboard type
+                      keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty ||
@@ -315,24 +320,43 @@ class _RegisteruState extends State<Registeru> {
                       onChanged: (value) {
                         _email = value; // Store email value
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
+
+                    // สำหรับฟิลด์ Phone Number
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
                         border: const OutlineInputBorder(),
+                        counterText: '', // ไม่แสดงตัวนับ
                       ),
-                      keyboardType: TextInputType.phone, // Phone keyboard type
+                      keyboardType: TextInputType.phone,
+                      maxLength: 10, // จำกัดจำนวนตัวอักษรให้มีได้แค่ 10 ตัว
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'กรุณากรอกหมายเลขโทรศัพท์';
+                        }
+                        if (value.length != 10) {
+                          return 'หมายเลขโทรศัพท์ต้องมี 10 หลัก';
                         }
                         return null;
                       },
                       onChanged: (value) {
                         _phoneNumber = value; // Store phone number
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter
+                            .digitsOnly, // ป้องกันไม่ให้มีตัวอักษร
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
+
+                    // สำหรับฟิลด์ Password
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: InputDecoration(
@@ -352,8 +376,7 @@ class _RegisteruState extends State<Registeru> {
                           },
                         ),
                       ),
-                      obscureText:
-                          !_isPasswordVisible, // Password visibility toggle
+                      obscureText: !_isPasswordVisible,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'กรุณากรอกรหัสผ่าน';
@@ -363,7 +386,13 @@ class _RegisteruState extends State<Registeru> {
                       onChanged: (value) {
                         _password = value; // Store password
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
+
+                    // สำหรับฟิลด์ Confirm Password
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: InputDecoration(
@@ -383,8 +412,7 @@ class _RegisteruState extends State<Registeru> {
                           },
                         ),
                       ),
-                      obscureText:
-                          !_isConfirmPasswordVisible, // Confirm password visibility toggle
+                      obscureText: !_isConfirmPasswordVisible,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'กรุณากรอกรหัสผ่านอีกครั้ง';
@@ -393,7 +421,12 @@ class _RegisteruState extends State<Registeru> {
                         }
                         return null;
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(
+                            RegExp(r'\s')), // ป้องกันไม่ให้มีช่องว่าง
+                      ],
                     ),
+
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,

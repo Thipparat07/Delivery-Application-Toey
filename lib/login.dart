@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_delivery_1/config/config.dart';
 import 'package:flutter_delivery_1/home_page.dart';
 import 'package:flutter_delivery_1/registerR.dart';
@@ -20,7 +21,7 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   bool _isPasswordVisible = false;
   bool _isLoading = false; // ตัวแปรสำหรับจัดการสถานะการโหลด
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String url = '';
 
@@ -39,16 +40,14 @@ class _LoginState extends State<Login> {
 
   void _checkUserLoggedIn() {
     final box = GetStorage();
-    final String userType = box.read('userType') ?? 'null'; // อ่านค่า userType
+    final String? userType = box.read('userType'); // Nullable String
 
-    if (userType != '') {
+    if (userType != null && userType.isNotEmpty) {
       // นำทางตามประเภทผู้ใช้
       if (userType == 'User') {
-        // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
         Get.to(const HomePage());
       } else if (userType == 'Rider') {
-        // นำทางไปยังหน้า Rider
-        Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
+        Get.to(const Registerr());
       }
     }
   }
@@ -58,63 +57,68 @@ class _LoginState extends State<Login> {
       _isLoading = true; // เปลี่ยนสถานะการโหลดเมื่อเริ่มทำงาน
     });
 
-    final response = await http.post(
-      Uri.parse(
-          '$url/login'), // เปลี่ยน URL ให้ตรงกับ API ของคุณ
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      // เข้าสู่ระบบสำเร็จ
-      final data = jsonDecode(response.body);
-      String userType = data['userType'];
-      int userId = data['userId'];
-      String Name = data['Name'];
-
-      // log('Login successful: ${data['message']}');
-      // log('userId: ${data['userId']}');
-      // log('Name: ${data['Name']}');
-
-      // นำทางตามประเภทผู้ใช้
-      if (userType == 'User') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'])),
-        );
-        final box = GetStorage();
-        // เก็บข้อมูล
-        box.write('userType', userType);
-        box.write('userId', userId);
-        box.write('Name', Name);
-        Get.to(const HomePage()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
-      } else if (userType == 'Rider') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'])),
-        );
-        final box = GetStorage();
-        // เก็บข้อมูล
-        box.write('userType', userType);
-        box.write('userId', userId);
-        box.write('Name', Name);
-        Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
-      }
-    } else {
-      // แสดงข้อผิดพลาด
-      final data = jsonDecode(response.body);
-      log('Login failed: ${data['message']}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data['message'])),
+    try {
+      final response = await http.post(
+        Uri.parse('$url/login'), // เปลี่ยน URL ให้ตรงกับ API ของคุณ
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'phoneNumber': _phoneController.text,
+          'password': _passwordController.text,
+        }),
       );
-    }
 
-    setState(() {
-      _isLoading = false; // เปลี่ยนสถานะการโหลดเมื่อเสร็จสิ้น
-    });
+      if (response.statusCode == 200) {
+        // เข้าสู่ระบบสำเร็จ
+        final data = jsonDecode(response.body);
+
+        // Null checks for all fields
+        String? userType = data['userType'];
+        int? userId = data['userid'];
+        String? name = data['name'];
+
+        if (userType == null || userId == null || name == null) {
+          log('Login response contains null values.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: Missing user data')),
+          );
+          return; // Stop further execution if any value is null
+        }
+
+        // นำทางตามประเภทผู้ใช้
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'])),
+        );
+        final box = GetStorage();
+        // เก็บข้อมูล
+        box.write('userType', userType);
+        box.write('userId', userId);
+        box.write('Name', name);
+
+        if (userType == 'User') {
+          Get.to(const HomePage()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ User
+        } else if (userType == 'Rider') {
+          Get.to(const Registerr()); // เปลี่ยนเป็นหน้าที่เหมาะสมสำหรับ Rider
+        }
+      } else {
+        // แสดงข้อผิดพลาด
+        final data = jsonDecode(response.body);
+        log('Login failed: ${data['message']}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'])),
+        );
+      }
+    } catch (e) {
+      log('Login failed with exception: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Login failed. Please try again.')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false; // เปลี่ยนสถานะการโหลดเมื่อเสร็จสิ้น
+      });
+    }
   }
 
   @override
@@ -146,14 +150,27 @@ class _LoginState extends State<Login> {
             ),
             const SizedBox(height: 30),
 
-            // ช่องกรอกอีเมล
+            // ช่องกรอกหมายเลขโทรศัพท์
             TextFormField(
-              controller: _emailController, // ใช้ Controller
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(
+                    10), // จำกัดให้กรอกได้แค่ 10 ตัว
+              ],
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: 'Phone',
                 border: OutlineInputBorder(),
               ),
-              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter phone number';
+                } else if (value.length != 10) {
+                  return 'Phone number must be 10 digits';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
 
@@ -177,6 +194,10 @@ class _LoginState extends State<Login> {
                   },
                 ),
               ),
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(
+                    RegExp(r'\s')), // ป้องกันไม่ให้มีตัวอักษรช่องว่าง
+              ],
             ),
             const SizedBox(height: 30),
 
