@@ -1,7 +1,10 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_delivery_1/Product.dart';
+import 'package:flutter_delivery_1/check_status.dart';
 import 'package:flutter_delivery_1/login.dart';
+import 'package:flutter_delivery_1/profileU.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart'; 
 class HomePage extends StatefulWidget {
@@ -29,13 +32,12 @@ class _HomePageState extends State<HomePage> {
         Get.to(() => ()); // หน้าแรก
         break;
       case 1:
-        Get.to(() => ()); // หน้าโปรไฟล์
+        Get.to(() => Profileu()); // หน้าโปรไฟล์
         break;
       case 2:
-        Get.to(() => ()); // หน้าสถานะการจัดส่ง
+        Get.to(() => CheckStatus()); // หน้าสถานะการจัดส่ง
         break;
       case 3:
-        final box = GetStorage();
         box.remove('userId');  // ลบ userId
         box.remove('Name');  // ลบ userId
         box.remove('userType');  // ลบ userId
@@ -130,7 +132,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 120), // ระยะจากขอบซ้ายและขวา
             child: ElevatedButton.icon(
               onPressed: () {
-                // ฟังก์ชันเมื่อกดปุ่ม
+                 Get.to(() => ProductListPage());
               },
               icon: const Icon(Icons.add_box, color: Colors.white),
               label: const Text(

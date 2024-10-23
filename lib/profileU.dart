@@ -1,16 +1,41 @@
+import 'dart:convert'; // นำเข้าเพื่อแปลงข้อมูล JSON
+import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // นำเข้า Get
+import 'package:flutter_delivery_1/model/UesrsDataGetResponse.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
 
-class Profileu extends StatelessWidget {
+class Profileu extends StatefulWidget {
   const Profileu({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // ตัวอย่างข้อมูลผู้ใช้
-    final String userName = "John Doe";
-    final String phoneNumber = "123-456-7890";
-    final String email = "john.doe@example.com";
+  _ProfileuState createState() => _ProfileuState();
+}
 
+class _ProfileuState extends State<Profileu> {
+  @override
+  void initState() {
+    super.initState();
+
+    fetchUserData();
+  }
+
+  // ฟังก์ชันดึงข้อมูลผู้ใช้จาก API
+  Future<UesrsDataGetResponse> fetchUserData() async {
+    int userId = GetStorage().read('userId');
+    final response =
+        await http.get(Uri.parse('http://10.0.2.2:3000/users/$userId'));
+
+    if (response.statusCode == 200) {
+      return uesrsDataGetResponseFromJson(response.body);
+    } else {
+      throw Exception('Failed to load user data');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -20,7 +45,7 @@ class Profileu extends StatelessWidget {
             height: 29.32,
           ),
           onPressed: () {
-            Get.back(); // ใช้ Get เพื่อกลับไปยังหน้าก่อนหน้า
+            Get.back();
           },
         ),
         actions: <Widget>[
@@ -52,68 +77,86 @@ class Profileu extends StatelessWidget {
         ],
         toolbarHeight: 92,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start, // จัดตำแหน่งไปด้านบน
-          children: [
-            // กล่องสำหรับรูปโปรไฟล์
-            Container(
-              width: 113,
-              height: 113,
-              decoration: BoxDecoration(
-                shape: BoxShape.rectangle,
-                borderRadius: BorderRadius.circular(7),
-                color: Colors.grey[200], // สีพื้นหลัง
-                image: const DecorationImage(
-                  image: AssetImage('asset/images/ProfileU.jpg'), // ตรวจสอบที่อยู่ภาพ
-                  fit: BoxFit.cover,
-                ),
+      body: FutureBuilder<UesrsDataGetResponse>(
+        future: fetchUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+                child: CircularProgressIndicator()); // รอการดึงข้อมูล
+          } else if (snapshot.hasError) {
+            // แสดงข้อความข้อผิดพลาดเมื่อเกิดข้อผิดพลาด
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            // หากได้ข้อมูลมาแล้ว แสดงข้อมูลใน UI
+            final user = snapshot.data!.user;
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: Image.network(
+                      user.profilePicture,
+                      width: 113,
+                      height: 113,
+                      fit: BoxFit.cover,
+                      errorBuilder: (BuildContext context, Object error,
+                          StackTrace? stackTrace) {
+                        return Container(
+                          width: 113,
+                          height: 113,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                              Icons.error), // แสดงไอคอนเมื่อโหลดภาพล้มเหลว
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoContainer(user.name),
+                  const SizedBox(height: 16),
+                  _buildInfoContainer(user.phoneNumber),
+                  const SizedBox(height: 16),
+                  _buildInfoContainer(user.email),
+                ],
               ),
-            ),
-            const SizedBox(height: 16), // ระยะห่างระหว่างรูปโปรไฟล์และชื่อ
-            // ช่องแสดงชื่อผู้ใช้
-            _buildInfoContainer(userName),
-            const SizedBox(height: 16), // ระยะห่างระหว่างช่อง
-            // ช่องแสดงเบอร์โทรศัพท์
-            _buildInfoContainer(phoneNumber),
-            const SizedBox(height: 16), // ระยะห่างระหว่างช่อง
-            // ช่องแสดงอีเมล
-            _buildInfoContainer(email),
-          ],
-        ),
+            );
+          } else {
+            return const Center(child: Text('No user data available'));
+          }
+        },
       ),
       bottomNavigationBar: BottomAppBar(
-        color: const Color(0xFF214FC6), // สีพื้นหลังของ BottomAppBar
+        color: const Color(0xFF214FC6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _bottomNavItem(Icons.home, 'หน้าหลัก', 0), // เมนูหน้าหลัก
-            _bottomNavItem(Icons.person, 'โปรไฟล์', 1), // เมนูโปรไฟล์
-            _bottomNavItem(Icons.local_shipping, 'สถานะการจัดส่ง', 2), // เมนูสถานะการจัดส่ง
-            _bottomNavItem(Icons.exit_to_app, 'ออกจากระบบ', 3), // เมนูออกจากระบบ
+            _bottomNavItem(Icons.home, 'หน้าหลัก', 0),
+            _bottomNavItem(Icons.person, 'โปรไฟล์', 1),
+            _bottomNavItem(Icons.local_shipping, 'สถานะการจัดส่ง', 2),
+            _bottomNavItem(Icons.exit_to_app, 'ออกจากระบบ', 3),
           ],
         ),
       ),
     );
   }
 
-  // ฟังก์ชันสำหรับสร้างช่องแสดงข้อมูล
   Widget _buildInfoContainer(String info) {
     return Container(
-      width: double.infinity, // กำหนดให้กว้างสุด
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9D9D9), // เปลี่ยนให้เป็นสีโค้ดที่คุณต้องการ
-        borderRadius: BorderRadius.circular(8), // กำหนดความมนของมุม
+        color: const Color(0xFFD9D9D9),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         info,
         style: const TextStyle(
           fontSize: 16,
-          color: Colors.black, // สีของข้อมูล
-        ), // ขนาดตัวอักษร
-        textAlign: TextAlign.left, // จัดข้อความไปทางซ้าย
+          color: Colors.black,
+        ),
+        textAlign: TextAlign.left,
       ),
     );
   }
@@ -123,29 +166,14 @@ class Profileu extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: Icon(icon, color: Colors.white), // ไอคอนเมนู
+          icon: Icon(icon, color: Colors.white),
           onPressed: () {
-            // นำทางไปยังหน้าต่างที่เหมาะสม
-            // switch (index) {
-            //   case 0:
-            //     Get.to(() => HomePage()); // นำไปหน้าหลัก
-            //     break;
-            //   case 1:
-            //     Get.to(() => Profileu()); // นำไปหน้าโปรไฟล์
-            //     break;
-            //   case 2:
-            //     Get.to(() => Container()); // นำไปหน้าสถานะการจัดส่ง
-            //     break;
-            //   case 3:
-            //     Get.to(() => Container()); // นำไปหน้าออกจากระบบ
-            //     break;
-            // }
+            // นำทางไปยังหน้าต่างๆตาม index
           },
-          padding: const EdgeInsets.all(0), // ลด padding ของปุ่ม
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 10), // ข้อความใต้ไอคอน
+          style: const TextStyle(color: Colors.white, fontSize: 10),
         ),
       ],
     );
